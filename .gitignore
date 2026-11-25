@@ -1,0 +1,8 @@
+server/node_modules/
+server/dist/
+server/data/
+server/.env
+ios/*.xcodeproj/
+ios/DerivedData/
+.DS_Store
+*.xcuserstate

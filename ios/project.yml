@@ -1,0 +1,48 @@
+name: PhotoBackup
+options:
+  bundleIdPrefix: com.selfhosted
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "15.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGNING_ALLOWED: NO
+    CODE_SIGNING_REQUIRED: NO
+targets:
+  PhotoBackup:
+    type: application
+    platform: iOS
+    sources:
+      - path: PhotoBackup
+        excludes:
+          - Resources/Info.plist
+          - Resources/PrivacyInfo.xcprivacy
+    resources:
+      - path: PhotoBackup/Resources/PrivacyInfo.xcprivacy
+    info:
+      path: PhotoBackup/Resources/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.selfhosted.PhotoBackup
+        PRODUCT_NAME: PhotoBackup
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_KEY_UILaunchScreen_Generation: true
+        SUPPORTS_MACCATALYST: false
+        SDKROOT: iphoneos
+        VALID_ARCHS: arm64
+    scheme:
+      testTargets:
+        - PhotoBackupTests
+  PhotoBackupTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: PhotoBackupTests
+    dependencies:
+      - target: PhotoBackup
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.selfhosted.PhotoBackupTests

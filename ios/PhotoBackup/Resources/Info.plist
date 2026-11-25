@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleDisplayName</key><string>家庭相册备份</string>
+<key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+<key>CFBundleVersion</key><string>1</string><key>CFBundleShortVersionString</key><string>1.0</string>
+<key>UILaunchScreen</key><dict/>
+<key>NSPhotoLibraryUsageDescription</key><string>用于读取系统相册中的原始照片和视频，并自动备份到你配置的家庭服务器。</string>
+<key>BGTaskSchedulerPermittedIdentifiers</key><array><string>com.selfhosted.PhotoBackup.processing</string></array>
+<key>UIBackgroundModes</key><array><string>processing</string><string>fetch</string></array>
+<key>NSAppTransportSecurity</key><dict><key>NSAllowsArbitraryLoads</key><false/></dict>
+</dict></plist>
