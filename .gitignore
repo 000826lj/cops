@@ -1,4 +1,7 @@
 .workbuddy/
+output/
+build-*-logs/
+build-*-logs.zip
 server/node_modules/
 server/dist/
 server/data/
