@@ -68,7 +68,12 @@ final class BackupCoordinator: ObservableObject {
             if session.duplicate == true || session.completed == true { try store.set(record, status: .completed, size: size, uploaded: size); return }
             guard let uploadID = session.uploadID else { throw BackupError.invalidResponse }
             try store.set(record, status: .uploading, uploadID: uploadID, size: size, uploaded: 0)
-            let missing = session.missingChunks ?? (try await APIClient.shared.missingChunks(uploadID: uploadID, token: token).missingChunks)
+            let missing: [Int]
+            if let sessionMissing = session.missingChunks {
+                missing = sessionMissing
+            } else {
+                missing = try await APIClient.shared.missingChunks(uploadID: uploadID, token: token).missingChunks
+            }
             var uploaded = size - chunks.filter { missing.contains($0.index) }.reduce(0) { $0 + $1.length }
             for index in ChunkPlan.normalizedMissing(missing, chunkCount: chunks.count) {
                 guard NetworkMonitor.shared.uploadAllowed else { throw BackupError.networkDisallowed }

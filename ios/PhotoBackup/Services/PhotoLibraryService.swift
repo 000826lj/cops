@@ -31,9 +31,9 @@ final class PhotoLibraryService {
         let url = folder.appendingPathComponent(UUID().uuidString + "-" + fileName)
         try? FileManager.default.removeItem(at: url)
         let options = PHAssetResourceRequestOptions(); options.isNetworkAccessAllowed = true
-        try await withCheckedThrowingContinuation { continuation in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             PHAssetResourceManager.default().writeData(for: resource, toFile: url, options: options) { error in
-                if let error { continuation.resume(throwing: error) } else { continuation.resume() }
+                if let error { continuation.resume(throwing: error) } else { continuation.resume(returning: ()) }
             }
         }
         return url
