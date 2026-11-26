@@ -129,6 +129,6 @@ describe('PhotoBackup API', () => {
     expect(page.text).toContain('setInterval');
     expect(page.text).toContain('visibilitychange');
     expect(page.text).toContain('/gallery/api/assets?limit=60&offset=0');
-    expect(page.text).toContain('每 15 秒自动刷新');
+    expect(page.text).toContain('每 3 秒自动刷新');
   });
 });
