@@ -15,7 +15,7 @@ struct RootView: View {
                         ProgressView()
                         Text(connectionError.isEmpty ? "正在连接家庭照片服务器" : connectionError)
                             .multilineTextAlignment(.center)
-                            .foregroundStyle(connectionError.isEmpty ? .primary : .red)
+                            .foregroundColor(connectionError.isEmpty ? Color.primary : Color.red)
                         if !connectionError.isEmpty {
                             Button("重新连接") { connectAndStart() }
                                 .buttonStyle(.borderedProminent)
