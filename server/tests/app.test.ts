@@ -14,6 +14,7 @@ let app: ReturnType<typeof createApp>;
 const configFor = (root: string): AppConfig => ({
   port: 0, databasePath: path.join(root, 'db.sqlite'), storagePath: path.join(root, 'media'),
   jwtSecret: 'test-secret-at-least-32-characters-long', jwtExpiresIn: '1h', deviceAccessKey: 'test-device-key-at-least-32-characters',
+  galleryPassword: 'gallery-test-password',
   maxFileSize: 1024 * 1024, maxChunkSize: 4, rateLimitWindowMs: 60_000, rateLimitMax: 1000
 });
 
@@ -92,5 +93,34 @@ describe('PhotoBackup API', () => {
     }).expect(200);
     expect(duplicate.body.duplicate).toBe(true);
     expect((await request(app).get('/api/assets').set('Authorization', `Bearer ${token}`)).body.total).toBe(1);
+  });
+
+  it('网页相册需要密码，登录后可读清单和媒体，退出后失效', async () => {
+    const token = await register();
+    const data = Buffer.from('abcdefghijk');
+    const uploaded = await upload(token, 'gallery-asset', data);
+    const assetId = uploaded.body.asset.id as string;
+
+    await request(app).get('/gallery/api/assets').expect(401);
+    await request(app).post('/gallery/login').send({ password: 'wrong-password' }).expect(401);
+
+    const login = await request(app).post('/gallery/login').send({ password: 'gallery-test-password' }).expect(200);
+    const cookie = login.headers['set-cookie'] as unknown as string[];
+    expect(cookie.some(c => c.startsWith('pb_gallery_session=') && c.includes('HttpOnly'))).toBe(true);
+
+    const list = await request(app).get('/gallery/api/assets').set('Cookie', cookie).expect(200);
+    expect(list.body.total).toBe(1);
+    expect(list.body.items[0].fileName).toBe('gallery-asset.jpg');
+
+    const media = await request(app).get(`/gallery/api/media/${assetId}`).set('Cookie', cookie).expect(200);
+    expect(Buffer.from(media.body)).toEqual(data);
+
+    const range = await request(app).get(`/gallery/api/media/${assetId}`).set('Cookie', cookie).set('Range', 'bytes=2-5').expect(206);
+    expect(Buffer.from(range.body)).toEqual(data.subarray(2, 6));
+
+    const logout = await request(app).post('/gallery/logout').expect(200);
+    const cleared = logout.headers['set-cookie'] as unknown as string[];
+    const clearedCookie = cleared.map(c => c.split(';')[0]).join('; ');
+    await request(app).get('/gallery/api/assets').set('Cookie', clearedCookie).expect(401);
   });
 });
