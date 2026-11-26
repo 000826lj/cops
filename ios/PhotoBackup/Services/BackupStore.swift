@@ -9,7 +9,16 @@ final class BackupStore {
         let model = NSManagedObjectModel()
         let entity = NSEntityDescription(); entity.name = "BackupRecord"; entity.managedObjectClassName = "NSManagedObject"
         func attribute(_ name: String, _ type: NSAttributeType, optional: Bool = false) -> NSAttributeDescription {
-            let value = NSAttributeDescription(); value.name = name; value.attributeType = type; value.isOptional = optional; return value
+            let value = NSAttributeDescription(); value.name = name; value.attributeType = type; value.isOptional = optional
+            switch type {
+            case .integer16AttributeType, .integer32AttributeType, .integer64AttributeType, .doubleAttributeType, .floatAttributeType:
+                value.defaultValue = 0
+            case .booleanAttributeType:
+                value.defaultValue = false
+            default:
+                break
+            }
+            return value
         }
         entity.properties = [
             attribute("recordID", .stringAttributeType), attribute("assetIdentifier", .stringAttributeType),
@@ -32,9 +41,16 @@ final class BackupStore {
         let context = container.viewContext
         let request = NSFetchRequest<NSManagedObject>(entityName: "BackupRecord")
         request.predicate = NSPredicate(format: "recordID == %@", descriptor.recordID)
-        let object = try context.fetch(request).first ?? NSEntityDescription.insertNewObject(forEntityName: "BackupRecord", into: context)
+        let existing = try context.fetch(request).first
+        let object = existing ?? NSEntityDescription.insertNewObject(forEntityName: "BackupRecord", into: context)
+        if existing == nil {
+            object.setValue(0, forKey: "fileSize")
+            object.setValue(0, forKey: "uploadedBytes")
+            object.setValue(0, forKey: "retryCount")
+            object.setValue(BackupStatus.pending.rawValue, forKey: "status")
+        }
         object.setValue(descriptor.recordID, forKey: "recordID"); object.setValue(descriptor.assetLocalIdentifier, forKey: "assetIdentifier")
-        object.setValue(descriptor.resourceType, forKey: "resourceType"); object.setValue(descriptor.filename, forKey: "fileName")
+        object.setValue(Int(descriptor.resourceType), forKey: "resourceType"); object.setValue(descriptor.filename, forKey: "fileName")
         object.setValue(descriptor.uniformTypeIdentifier, forKey: "uti"); object.setValue(descriptor.creationDate, forKey: "capturedAt")
         if object.value(forKey: "status") == nil { object.setValue(BackupStatus.pending.rawValue, forKey: "status") }
         object.setValue(Date(), forKey: "updatedAt"); try context.save()
