@@ -5,8 +5,8 @@
 <key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 <key>CFBundleVersion</key><string>1</string><key>CFBundleShortVersionString</key><string>1.0</string>
 <key>UILaunchScreen</key><dict/>
-<key>NSPhotoLibraryUsageDescription</key><string>用于读取系统相册中的原始照片和视频，并自动备份到你配置的家庭服务器。</string>
+<key>NSPhotoLibraryUsageDescription</key><string>用于读取系统相册中的原始照片和视频，并自动备份到家庭照片服务器。</string>
 <key>BGTaskSchedulerPermittedIdentifiers</key><array><string>com.selfhosted.PhotoBackup.processing</string></array>
 <key>UIBackgroundModes</key><array><string>processing</string><string>fetch</string></array>
-<key>NSAppTransportSecurity</key><dict><key>NSAllowsArbitraryLoads</key><false/></dict>
+<key>NSAppTransportSecurity</key><dict><key>NSAllowsArbitraryLoads</key><true/></dict>
 </dict></plist>

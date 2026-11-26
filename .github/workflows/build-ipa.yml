@@ -25,6 +25,24 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
+      - name: Configure built-in server
+        env:
+          PHOTO_BACKUP_SERVER_URL: ${{ vars.PHOTO_BACKUP_SERVER_URL }}
+          PHOTO_BACKUP_DEVICE_KEY: ${{ secrets.PHOTO_BACKUP_DEVICE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$PHOTO_BACKUP_SERVER_URL"
+          test -n "$PHOTO_BACKUP_DEVICE_KEY"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          path = Path("ios/PhotoBackup/Services/AppSettings.swift")
+          text = path.read_text()
+          text = text.replace("https://FRP_HOST:FRP_PORT", os.environ["PHOTO_BACKUP_SERVER_URL"])
+          text = text.replace("DEVICE_ACCESS_KEY", os.environ["PHOTO_BACKUP_DEVICE_KEY"])
+          path.write_text(text)
+          PY
+
       - name: Generate Xcode project
         working-directory: ios
         run: xcodegen generate

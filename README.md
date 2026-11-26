@@ -5,31 +5,40 @@
 - `ios/`：原生 SwiftUI iPhone App，读取系统相册中的原始照片和视频并增量上传。
 - `server/`：Node.js + Express + SQLite 服务端，支持家庭多账号、邀请码、分块续传、SHA-256 去重和用户隔离。
 
-## 1. 部署服务器
+## 1. Windows + FRP 测试
 
-服务器要求：Linux、Docker、Docker Compose，以及一个指向服务器的 HTTPS 域名。iOS 正式使用时必须使用 HTTPS。
+现在先在 Windows 本机运行服务端，FRP 只需把公网端口转发到本机 `3000`：
+
+```text
+公网 FRP -> Windows 本机 127.0.0.1:3000
+```
+
+1. 进入 `server`，复制 `.env.example` 为 `.env`。
+2. 设置 `JWT_SECRET` 和 `DEVICE_ACCESS_KEY`，两者都用随机长字符串。
+3. 双击 `start-windows.cmd`，看到 `PhotoBackup server listening on :3000`。
+4. 双击 `check-windows.cmd`，确认返回 `{"ok":true}`。
+5. 在 GitHub 仓库 Settings -> Secrets and variables -> Actions 中设置：
+   - Variables：`PHOTO_BACKUP_SERVER_URL`，例如 `http://你的FRP域名:公网端口`
+   - Secrets：`PHOTO_BACKUP_DEVICE_KEY`，值必须与 Windows `.env` 中的 `DEVICE_ACCESS_KEY` 完全一致。
+6. 推送或手动运行 Actions，得到新的 IPA。手机安装后不需要输入地址、账号或密码，打开后自动连接并请求相册权限。
+
+测试阶段可使用 HTTP；正式使用建议把 FRP 前面接 HTTPS，再把 `PHOTO_BACKUP_SERVER_URL` 改为 `https://...`。
+
+照片实际保存在 `server/data/media/user-用户ID/年/月/`，SQLite 位于 `server/data/photos.db`。迁移到 Linux 时，把整个 `server/data/` 和 `.env` 一起迁移，并重新构建 IPA 只需替换服务器地址。
+
+## 2. Linux / Docker 部署
+
+服务器要求：Linux、Docker、Docker Compose。复制 `server/.env.example` 为 `.env`，设置 `JWT_SECRET` 和 `DEVICE_ACCESS_KEY`，然后执行：
 
 ```bash
 cd server
-cp .env.example .env
-# 编辑 .env，把 JWT_SECRET 改成随机长字符串
-# 可用：openssl rand -hex 32
 docker compose up -d --build
-curl https://你的域名/health
+curl http://127.0.0.1:3000/health
 ```
 
-建议用 Nginx 或 Caddy 把 HTTPS 域名反向代理到 `127.0.0.1:3000`。照片实际保存在 `server/data/media/user-用户ID/年/月/`，SQLite 位于 `server/data/photos.db`。务必定期备份整个 `server/data/`。
+生产环境应在 Nginx 或 Caddy 后使用 HTTPS。
 
-首个注册账号自动成为管理员。管理员登录后可创建家人邀请码：
-
-```bash
-curl -X POST https://你的域名/api/invites \
-  -H "Authorization: Bearer 登录返回的TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"expiresInDays":7}'
-```
-
-## 2. 生成和安装 iPhone App
+## 3. 生成和安装 iPhone App
 
 ### GitHub 自动生成未签名 IPA
 
@@ -57,8 +66,8 @@ open PhotoBackup.xcodeproj
 1. 选择 `PhotoBackup` Target → Signing & Capabilities，设置你的 Team 和唯一 Bundle Identifier。
 2. 添加 Background Modes，并启用 Background processing（工程配置已声明，签名时仍需核对）。
 3. 连接 iPhone，选择真机，Build & Run。
-4. App 内填写 HTTPS 服务器地址，注册首个管理员账号。
-5. 授权“所有照片”，点击“立即扫描并备份”。
+4. 打开 App，不需要填写任何内容。
+5. App 自动连接预置服务器并请求“所有照片”权限；允许后立即开始扫描上传。
 
 ## 自动备份机制
 

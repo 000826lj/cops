@@ -13,7 +13,7 @@ let db: AppDatabase;
 let app: ReturnType<typeof createApp>;
 const configFor = (root: string): AppConfig => ({
   port: 0, databasePath: path.join(root, 'db.sqlite'), storagePath: path.join(root, 'media'),
-  jwtSecret: 'test-secret-at-least-32-characters-long', jwtExpiresIn: '1h',
+  jwtSecret: 'test-secret-at-least-32-characters-long', jwtExpiresIn: '1h', deviceAccessKey: 'test-device-key-at-least-32-characters',
   maxFileSize: 1024 * 1024, maxChunkSize: 4, rateLimitWindowMs: 60_000, rateLimitMax: 1000
 });
 
@@ -46,6 +46,21 @@ async function upload(token: string, assetId: string, data: Buffer) {
 }
 
 describe('PhotoBackup API', () => {
+  it('设备使用预置接入码自动创建账号并保持同一用户', async () => {
+    const first = await request(app).post('/api/auth/device').send({
+      deviceId: 'iphone-device-0001', deviceName: '测试 iPhone', accessKey: 'test-device-key-at-least-32-characters'
+    }).expect(200);
+    expect(first.body.token).toBeTypeOf('string');
+    expect(first.body.user.role).toBe('admin');
+    const second = await request(app).post('/api/auth/device').send({
+      deviceId: 'iphone-device-0001', deviceName: '测试 iPhone', accessKey: 'test-device-key-at-least-32-characters'
+    }).expect(200);
+    expect(second.body.userID).toBe(first.body.userID);
+    await request(app).post('/api/auth/device').send({
+      deviceId: 'iphone-device-0002', deviceName: '未知设备', accessKey: 'wrong-device-key-000000'
+    }).expect(401);
+  });
+
   it('首个用户为管理员，并可登录', async () => {
     const token = await register();
     const me = await request(app).get('/api/me').set('Authorization', `Bearer ${token}`).expect(200);

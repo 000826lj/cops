@@ -2,6 +2,9 @@ import Foundation
 
 final class AppSettings: ObservableObject {
     static let shared = AppSettings()
+    // These values are replaced by the GitHub build workflow for the current FRP endpoint.
+    static let builtInServerURL = "https://FRP_HOST:FRP_PORT"
+    static let builtInDeviceAccessKey = "DEVICE_ACCESS_KEY"
 
     private enum Keys {
         static let serverURL = "serverURL"
@@ -18,7 +21,7 @@ final class AppSettings: ObservableObject {
     @Published var concurrentUploads: Int { didSet { defaults.set(concurrentUploads, forKey: Keys.concurrentUploads) } }
 
     private init() {
-        serverURL = defaults.string(forKey: Keys.serverURL) ?? "https://photos.example.com"
+        serverURL = Self.builtInServerURL
         allowWiFi = defaults.object(forKey: Keys.allowWiFi) as? Bool ?? true
         allowCellular = defaults.object(forKey: Keys.allowCellular) as? Bool ?? true
         concurrentUploads = max(1, defaults.object(forKey: Keys.concurrentUploads) as? Int ?? 2)

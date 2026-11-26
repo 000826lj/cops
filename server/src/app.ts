@@ -69,6 +69,33 @@ export function createApp(config: AppConfig, db: AppDatabase) {
     }
   }));
 
+  app.post('/api/auth/device', json, asyncHandler(async (req, res) => {
+    if (!config.deviceAccessKey) throw new HttpError(503, '服务端尚未配置设备接入码', 'DEVICE_ACCESS_DISABLED');
+    const accessKey = requireString(req.body?.accessKey, 'accessKey', 16, 256);
+    const suppliedKeyHash = crypto.createHash('sha256').update(accessKey).digest();
+    const configuredKeyHash = crypto.createHash('sha256').update(config.deviceAccessKey).digest();
+    if (!crypto.timingSafeEqual(suppliedKeyHash, configuredKeyHash)) {
+      throw new HttpError(401, '设备接入码无效', 'INVALID_DEVICE_KEY');
+    }
+    const deviceId = requireString(req.body?.deviceId, 'deviceId', 8, 128);
+    const deviceName = requireString(req.body?.deviceName ?? 'iPhone', 'deviceName', 1, 128);
+    let device = db.prepare('SELECT * FROM devices WHERE device_id=?').get(deviceId) as { user_id: number } | undefined;
+    if (!device) {
+      let user = db.prepare("SELECT * FROM users ORDER BY id LIMIT 1").get() as UserRow | undefined;
+      if (!user) {
+        const passwordHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
+        const result = db.prepare("INSERT INTO users(username,password_hash,role) VALUES(?,?, 'admin')").run('device-owner', passwordHash);
+        user = db.prepare('SELECT * FROM users WHERE id=?').get(Number(result.lastInsertRowid)) as UserRow;
+      }
+      db.prepare('INSERT INTO devices(device_id,user_id,device_name) VALUES(?,?,?)').run(deviceId, user.id, deviceName);
+      device = { user_id: user.id };
+    } else {
+      db.prepare('UPDATE devices SET device_name=?,last_seen_at=CURRENT_TIMESTAMP WHERE device_id=?').run(deviceName, deviceId);
+    }
+    const user = db.prepare('SELECT * FROM users WHERE id=?').get(device.user_id) as UserRow;
+    res.json({ token: signToken(publicUser(user) as any, config), user: publicUser(user), userID: String(user.id) });
+  }));
+
   app.post('/api/auth/login', json, asyncHandler(async (req, res) => {
     const username = requireString(req.body?.username, 'username', 1, 64).trim();
     const password = requireString(req.body?.password, 'password', 1, 128);

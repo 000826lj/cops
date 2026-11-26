@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct DashboardView: View {
-    @Binding var loggedIn: Bool
     @StateObject private var coordinator = BackupCoordinator.shared
     @StateObject private var settings = AppSettings.shared
     var body: some View {
@@ -21,17 +20,11 @@ struct DashboardView: View {
                     Toggle("允许蜂窝网络上传", isOn: $settings.allowCellular)
                     Text("视频可能消耗大量蜂窝流量。关闭蜂窝上传后，任务会等待 Wi-Fi。") .font(.footnote).foregroundStyle(.secondary)
                 }
-                Section("服务器") { Text(settings.serverURL).font(.footnote); NavigationLink("修改设置") { SettingsView() } }
+                Section("连接状态") { Text("已自动连接：\(settings.serverURL)").font(.footnote) }
                 Section("后台说明") { Text("iOS 会根据电量、网络与使用习惯调度后台任务，无法保证永久实时运行。每次打开 App 会立即扫描并补传；系统允许时也会在后台继续。") .font(.footnote) }
-                Section { Button("退出登录", role: .destructive) { KeychainStore.shared.remove("authToken"); loggedIn = false } }
-            }.navigationTitle("照片备份").onAppear { coordinator.refreshStatistics() }
+            }.navigationTitle("照片备份").onAppear { coordinator.refreshStatistics(); coordinator.requestPermissionAndBackup() }
         }
     }
 }
 
 private struct Stat: View { let title: String; let value: Int; var body: some View { VStack(alignment: .leading) { Text("\(value)").font(.title2.bold()); Text(title).font(.caption).foregroundStyle(.secondary) }.frame(maxWidth: .infinity, alignment: .leading) } }
-
-struct SettingsView: View {
-    @StateObject private var settings = AppSettings.shared
-    var body: some View { Form { TextField("服务器地址", text: $settings.serverURL).textInputAutocapitalization(.never).keyboardType(.URL); Stepper("并发任务：\(settings.concurrentUploads)", value: $settings.concurrentUploads, in: 1...3) }.navigationTitle("设置") }
-}

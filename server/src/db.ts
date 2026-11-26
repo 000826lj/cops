@@ -18,6 +18,15 @@ export function createDatabase(databasePath: string): AppDatabase {
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS devices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      device_id TEXT NOT NULL UNIQUE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      device_name TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS invites (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       code_hash TEXT NOT NULL UNIQUE,
@@ -77,6 +86,7 @@ export function createDatabase(databasePath: string): AppDatabase {
       PRIMARY KEY(upload_id, chunk_index)
     );
 
+    CREATE INDEX IF NOT EXISTS idx_devices_user ON devices(user_id);
     CREATE INDEX IF NOT EXISTS idx_assets_user_created ON assets(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_uploads_user_created ON uploads(user_id, created_at DESC);
   `);

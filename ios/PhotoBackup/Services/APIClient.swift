@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 struct CreateUploadRequest: Codable {
     let assetId: String
@@ -46,11 +47,21 @@ final class APIClient {
         return try decoder.decode(type, from: data)
     }
 
-    func authenticate(username: String, password: String, inviteCode: String?, register: Bool) async throws -> AuthResponse {
-        struct Payload: Codable { let username: String; let password: String; let inviteCode: String? }
-        var request = try request(path: register ? "/api/auth/register" : "/api/auth/login", method: "POST", body: try encoder.encode(Payload(username: username, password: password, inviteCode: inviteCode)))
-        request.timeoutInterval = 30
-        return try await perform(request, as: AuthResponse.self)
+    func connectDevice() async throws -> AuthResponse {
+        struct Payload: Codable { let deviceId: String; let deviceName: String; let accessKey: String }
+        let deviceIDKey = "photoBackupDeviceID"
+        let deviceID: String
+        if let existing = KeychainStore.shared.get(deviceIDKey) {
+            deviceID = existing
+        } else {
+            deviceID = UUID().uuidString
+            try KeychainStore.shared.set(deviceID, for: deviceIDKey)
+        }
+        let deviceName = await MainActor.run { UIDevice.current.name }
+        let payload = Payload(deviceId: deviceID, deviceName: deviceName, accessKey: AppSettings.builtInDeviceAccessKey)
+        var deviceRequest = try request(path: "/api/auth/device", method: "POST", body: try encoder.encode(payload))
+        deviceRequest.timeoutInterval = 30
+        return try await perform(deviceRequest, as: AuthResponse.self)
     }
 
     func createUpload(_ payload: CreateUploadRequest, token: String) async throws -> UploadSession {
