@@ -221,7 +221,8 @@ function galleryPage(authed: boolean): string {
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f7;color:#1c1c1e;padding-bottom:40px}
 header{position:sticky;top:0;z-index:10;background:rgba(245,245,247,.9);backdrop-filter:blur(12px);padding:16px 20px;border-bottom:1px solid #e5e5ea;display:flex;align-items:center;justify-content:space-between}
 h1{font-size:20px;margin:0}.sub{font-size:13px;color:#8e8e93;margin-top:2px}
-button{font:inherit;cursor:pointer}.logout{border:0;background:transparent;color:#007aff;font-size:14px}
+button{font:inherit;cursor:pointer}.logout,.refresh{border:0;background:transparent;color:#007aff;font-size:14px}
+.refresh{margin-right:14px}.refresh:disabled{opacity:.4;cursor:default}
 #main{max-width:1100px;margin:0 auto;padding:20px}.month{margin:24px 0 8px;font-size:17px;font-weight:700}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px}
 .cell{position:relative;aspect-ratio:1;overflow:hidden;border-radius:8px;background:#e5e5ea;cursor:pointer}
@@ -238,7 +239,7 @@ button{font:inherit;cursor:pointer}.logout{border:0;background:transparent;color
 .lb-close{position:absolute;top:16px;right:20px;font-size:28px;color:#fff;background:none;border:0;cursor:pointer}
 .loading{text-align:center;color:#8e8e93;padding:40px}
 </style></head><body>
-<header><div><h1>家庭相册</h1><div class="sub" id="sub">正在加载…</div></div><button class="logout" onclick="logout()">退出</button></header>
+<header><div><h1>家庭相册</h1><div class="sub" id="sub">正在加载…</div></div><div><button class="refresh" id="refreshBtn" onclick="refresh(true)">刷新</button><button class="logout" onclick="logout()">退出</button></div></header>
 <div id="main">${authed ? '<div class="loading" id="loading">正在加载照片…</div>' : '<div class="empty">登录状态已失效，请刷新页面重新登录。</div>'}</div>
 <div id="lightbox" onclick="if(event.target===this)closeBox()">
 <button class="lb-close" onclick="closeBox()">×</button>
@@ -247,42 +248,62 @@ button{font:inherit;cursor:pointer}.logout{border:0;background:transparent;color
 </div>
 <script>
 const authed=${authed ? 'true' : 'false'};
-let offset=0,total=0,loading=false;
-const main=document.getElementById('main');
+const POLL_MS=15000;
+let items=[],total=0,signature='',busy=false,pendingRender=false,timer=null,unauthorized=false;
+const main=document.getElementById('main'),box=document.getElementById('lightbox');
 function fmtDate(s){const d=new Date(s);return isNaN(d)?'':(d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'))}
 function monthKey(s){const d=new Date(s);return isNaN(d)?'未知':(d.getFullYear()+'年'+(d.getMonth()+1)+'月')}
 function esc(s){const div=document.createElement('div');div.textContent=s||'';return div.innerHTML}
-async function api(path){const r=await fetch(path);if(r.status===401){main.innerHTML='<div class="empty">登录已过期，请刷新页面重新登录。</div>';throw new Error('unauthorized')}if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
-async function load(){
-if(loading)return;loading=true;
-try{const d=await api('/gallery/api/assets?limit=60&offset='+offset);total=d.total;
-document.getElementById('sub').textContent='共 '+total+' 项 · 已显示 '+Math.min(offset+d.items.length,total);
-if(offset===0)main.innerHTML='';
-const loadingEl=document.getElementById('loading');if(loadingEl)loadingEl.remove();
-if(d.items.length===0&&offset===0){main.innerHTML='<div class="empty">还没有照片备份上来。<br>在 iPhone 上打开 App 并允许访问所有照片后，照片会出现在这里。</div>'}
+function setSub(extra){document.getElementById('sub').textContent='共 '+total+' 项 · 已显示 '+items.length+' · 每 15 秒自动刷新'+(extra?' · '+extra:'')}
+function stopPolling(){if(timer){clearInterval(timer);timer=null}}
+async function api(path){const r=await fetch(path,{cache:'no-store'});if(r.status===401){stopPolling();unauthorized=true;main.innerHTML='<div class="empty">登录已过期，请刷新页面重新登录。</div>';throw new Error('unauthorized')}if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
+function render(){
+if(unauthorized)return;
+const y=window.scrollY;
+main.innerHTML='';
+if(items.length===0){main.innerHTML='<div class="empty">还没有照片备份上来。<br>在 iPhone 上打开 App 并允许访问所有照片后，照片会自动出现在这里。</div>'}
+else{
 let lastMonth=null,grid=null;
-for(const it of d.items){const mk=monthKey(it.capturedAt);
+for(const it of items){const mk=monthKey(it.capturedAt);
 if(mk!==lastMonth){const h=document.createElement('div');h.className='month';h.textContent=mk;main.appendChild(h);grid=document.createElement('div');grid.className='grid';main.appendChild(grid);lastMonth=mk}
 const cell=document.createElement('div');cell.className='cell';
 if(it.mediaType==='video'){const v=document.createElement('video');v.src='/gallery/api/media/'+it.id;v.preload='metadata';v.muted=true;v.playsInline=true;cell.appendChild(v);const b=document.createElement('span');b.className='badge';b.textContent='▶ 视频';cell.appendChild(b);cell.onclick=()=>openBox(it)}
 else{const img=document.createElement('img');img.src='/gallery/api/media/'+it.id;img.loading='lazy';cell.appendChild(img);cell.onclick=()=>openBox(it)}
 const n=document.createElement('div');n.className='name';n.textContent=it.fileName;cell.appendChild(n);
 grid.appendChild(cell)}
-offset+=d.items.length;
-const old=document.getElementById('more');if(old)old.remove();
-if(offset<total){const btn=document.createElement('button');btn.id='more';btn.textContent='加载更多（'+offset+' / '+total+'）';btn.onclick=load;main.appendChild(btn)}
-}catch(e){if(e.message!=='unauthorized'){main.innerHTML='<div class="empty">加载失败：'+esc(e.message)+'</div>'}}
-loading=false}
-function openBox(it){const box=document.getElementById('lightbox'),c=document.getElementById('lbContent');
+if(items.length<total){const btn=document.createElement('button');btn.id='more';btn.textContent='加载更多（'+items.length+' / '+total+'）';btn.onclick=loadMore;main.appendChild(btn)}
+}
+setSub();window.scrollTo(0,y)}
+async function refresh(manual){
+if(busy||unauthorized)return;busy=true;
+const btn=document.getElementById('refreshBtn');if(btn)btn.disabled=true;
+try{const d=await api('/gallery/api/assets?limit=60&offset=0');total=d.total;
+const sig=String(d.total)+'|'+d.items.map(x=>x.id).join(',');
+const changed=sig!==signature;signature=sig;
+const seen=new Set(d.items.map(x=>x.id));
+items=d.items.concat(items.filter(x=>!seen.has(x.id)));
+if(changed){if(box.classList.contains('show')){pendingRender=true;setSub('发现新照片，关闭预览后更新')}else render()}
+else if(manual)setSub('刚刚已刷新')
+}catch(e){if(e.message!=='unauthorized')setSub('刷新失败：'+esc(e.message))}
+busy=false;if(btn)btn.disabled=false}
+async function loadMore(){
+if(busy||unauthorized)return;busy=true;
+try{const d=await api('/gallery/api/assets?limit=60&offset='+items.length);total=d.total;
+const seen=new Set(items.map(x=>x.id));
+items=items.concat(d.items.filter(x=>!seen.has(x.id)));render()
+}catch(e){if(e.message!=='unauthorized')setSub('加载失败：'+esc(e.message))}
+busy=false}
+function openBox(it){const c=document.getElementById('lbContent');
 c.innerHTML='';const src='/gallery/api/media/'+it.id;
 if(it.mediaType==='video'){const v=document.createElement('video');v.src=src;v.controls=true;v.autoplay=true;v.playsInline=true;v.className='lb-media';c.appendChild(v)}
 else{const img=document.createElement('img');img.src=src;img.className='lb-media';c.appendChild(img)}
 document.getElementById('lbName').textContent=it.fileName+' · '+fmtDate(it.capturedAt);
 const a=document.getElementById('lbDownload');a.href='/gallery/api/download/'+it.id;a.setAttribute('download',it.fileName);
 box.classList.add('show')}
-function closeBox(){const box=document.getElementById('lightbox');box.classList.remove('show');document.getElementById('lbContent').innerHTML=''}
-async function logout(){await fetch('/gallery/logout',{method:'POST'});location.href='/gallery/login'}
+function closeBox(){box.classList.remove('show');document.getElementById('lbContent').innerHTML='';if(pendingRender){pendingRender=false;render()}}
+async function logout(){stopPolling();await fetch('/gallery/logout',{method:'POST'});location.href='/gallery/login'}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeBox()});
-if(authed)load();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&authed&&!unauthorized)refresh(false)});
+if(authed){refresh(true).then(()=>{if(!unauthorized&&!timer)timer=setInterval(()=>{if(!document.hidden&&!busy)refresh(false)},POLL_MS)})}
 </script></body></html>`;
 }
