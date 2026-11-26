@@ -1,5 +1,6 @@
 .workbuddy/
 output/
+output-v2/
 build-*-logs/
 build-*-logs.zip
 server/node_modules/
