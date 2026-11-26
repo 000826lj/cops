@@ -8,6 +8,7 @@ import type { AppConfig } from './config.js';
 import type { AppDatabase } from './db.js';
 import { authenticate, requireAdmin, signToken, type AuthenticatedRequest } from './auth.js';
 import { asyncHandler, errorHandler, HttpError } from './errors.js';
+import { mountGallery } from './gallery.js';
 import type { AssetRow, UploadRow, UserRow } from './types.js';
 import { mimeExtensions, optionalPositiveNumber, requireInteger, requireString, validateCapturedAt, validateFilename, validateSha256 } from './validation.js';
 
@@ -237,6 +238,10 @@ export function createApp(config: AppConfig, db: AppDatabase) {
     const row = db.prepare('SELECT COUNT(*) AS count, COALESCE(SUM(size),0) AS bytes FROM assets WHERE user_id=?').get(user.id) as { count: number; bytes: number };
     res.json({ assets: row.count, bytes: row.bytes });
   });
+
+  const gallery = express.Router();
+  mountGallery(gallery, config, db);
+  app.use('/gallery', gallery);
 
   app.use((_req, _res, next) => next(new HttpError(404, '接口不存在', 'NOT_FOUND')));
   app.use(errorHandler);
