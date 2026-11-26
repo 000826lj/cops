@@ -16,4 +16,4 @@ RUN mkdir -p /app/data && chown -R node:node /app
 USER node
 EXPOSE 3000
 VOLUME ["/app/data"]
-CMD ["node", "dist/server.js"]
+CMD ["node", "dist/src/server.js"]
