@@ -24,6 +24,19 @@ targets:
       - path: PhotoBackup/Resources/PrivacyInfo.xcprivacy
     info:
       path: PhotoBackup/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: 家庭相册备份
+        CFBundleShortVersionString: "1.1"
+        CFBundleVersion: "2"
+        UILaunchScreen: {}
+        NSPhotoLibraryUsageDescription: 用于读取系统相册中的原始照片和视频，并自动备份到家庭照片服务器。
+        BGTaskSchedulerPermittedIdentifiers:
+          - com.selfhosted.PhotoBackup.processing
+        UIBackgroundModes:
+          - processing
+          - fetch
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.selfhosted.PhotoBackup
