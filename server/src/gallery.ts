@@ -248,13 +248,13 @@ button{font:inherit;cursor:pointer}.logout,.refresh{border:0;background:transpar
 </div>
 <script>
 const authed=${authed ? 'true' : 'false'};
-const POLL_MS=15000;
+const POLL_MS=3000;
 let items=[],total=0,signature='',busy=false,pendingRender=false,timer=null,unauthorized=false;
 const main=document.getElementById('main'),box=document.getElementById('lightbox');
 function fmtDate(s){const d=new Date(s);return isNaN(d)?'':(d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'))}
 function monthKey(s){const d=new Date(s);return isNaN(d)?'未知':(d.getFullYear()+'年'+(d.getMonth()+1)+'月')}
 function esc(s){const div=document.createElement('div');div.textContent=s||'';return div.innerHTML}
-function setSub(extra){document.getElementById('sub').textContent='共 '+total+' 项 · 已显示 '+items.length+' · 每 15 秒自动刷新'+(extra?' · '+extra:'')}
+function setSub(extra){document.getElementById('sub').textContent='共 '+total+' 项 · 已显示 '+items.length+' · 每 3 秒自动刷新'+(extra?' · '+extra:'')}
 function stopPolling(){if(timer){clearInterval(timer);timer=null}}
 async function api(path){const r=await fetch(path,{cache:'no-store'});if(r.status===401){stopPolling();unauthorized=true;main.innerHTML='<div class="empty">登录已过期，请刷新页面重新登录。</div>';throw new Error('unauthorized')}if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
 function render(){
