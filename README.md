@@ -26,9 +26,24 @@
 
 照片实际保存在 `server/data/media/user-用户ID/年/月/`，SQLite 位于 `server/data/photos.db`。迁移到 Linux 时，把整个 `server/data/` 和 `.env` 一起迁移，并重新构建 IPA 只需替换服务器地址。
 
+## 查看备份的照片（网页相册）
+
+服务内置了一个带密码保护的网页相册，手机和电脑浏览器都能用：
+
+```text
+http://47.108.249.177:3000/gallery/
+```
+
+1. 打开上面的地址，输入 `.env` 里 `GALLERY_PASSWORD` 的值即可进入。
+2. 照片和视频按年月分组显示，点开可看大图或播放视频，也能下载原图。
+3. 登录状态保存在浏览器 Cookie 中，30 天内不用重复输入密码，点右上角“退出”可清除。
+4. 未登录时无法读取照片清单和媒体文件，接口统一返回 401。
+
+本机地址是 `http://127.0.0.1:3000/gallery/`。如果修改了 `GALLERY_PASSWORD`，需要重启服务生效。
+
 ## 2. Linux / Docker 部署
 
-服务器要求：Linux、Docker、Docker Compose。复制 `server/.env.example` 为 `.env`，设置 `JWT_SECRET` 和 `DEVICE_ACCESS_KEY`，然后执行：
+服务器要求：Linux、Docker、Docker Compose。复制 `server/.env.example` 为 `.env`，设置 `JWT_SECRET`、`DEVICE_ACCESS_KEY` 和 `GALLERY_PASSWORD`，然后执行：
 
 ```bash
 cd server
