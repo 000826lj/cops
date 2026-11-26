@@ -7,6 +7,7 @@ export interface AppConfig {
   jwtSecret: string;
   jwtExpiresIn: string;
   deviceAccessKey: string;
+  galleryPassword: string;
   maxFileSize: number;
   maxChunkSize: number;
   rateLimitWindowMs: number;
@@ -27,6 +28,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     jwtSecret: env.JWT_SECRET ?? 'development-only-change-me',
     jwtExpiresIn: env.JWT_EXPIRES_IN ?? '365d',
     deviceAccessKey: env.DEVICE_ACCESS_KEY ?? '',
+    galleryPassword: env.GALLERY_PASSWORD ?? '',
     maxFileSize: positiveInteger(env.MAX_FILE_SIZE, 20 * 1024 * 1024 * 1024),
     maxChunkSize: positiveInteger(env.MAX_CHUNK_SIZE, 20 * 1024 * 1024),
     rateLimitWindowMs: positiveInteger(env.RATE_LIMIT_WINDOW_MS, 60_000),
