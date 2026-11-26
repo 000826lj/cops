@@ -63,6 +63,18 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             build | tee "$RUNNER_TEMP/xcodebuild.log"
 
+      - name: Verify built app configuration
+        run: |
+          set -euo pipefail
+          APP_PATH="$RUNNER_TEMP/DerivedData/Build/Products/Release-iphoneos/PhotoBackup.app"
+          PLIST="$APP_PATH/Info.plist"
+          test -f "$PLIST"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :NSAppTransportSecurity:NSAllowsArbitraryLoads' "$PLIST")" = "true"
+          test -n "$(/usr/libexec/PlistBuddy -c 'Print :NSPhotoLibraryUsageDescription' "$PLIST")"
+          /usr/libexec/PlistBuddy -c 'Print :BGTaskSchedulerPermittedIdentifiers:0' "$PLIST" | grep -Fx 'com.selfhosted.PhotoBackup.processing'
+          /usr/libexec/PlistBuddy -c 'Print :UIBackgroundModes' "$PLIST" | grep -F 'processing'
+          echo "Built app configuration verified"
+
       - name: Package unsigned IPA
         run: |
           set -euo pipefail
