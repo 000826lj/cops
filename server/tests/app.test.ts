@@ -123,4 +123,12 @@ describe('PhotoBackup API', () => {
     const clearedCookie = cleared.map(c => c.split(';')[0]).join('; ');
     await request(app).get('/gallery/api/assets').set('Cookie', clearedCookie).expect(401);
   });
+
+  it('相册页面内置自动刷新与回到前台立即检查', async () => {
+    const page = await request(app).get('/gallery/').expect(200);
+    expect(page.text).toContain('setInterval');
+    expect(page.text).toContain('visibilitychange');
+    expect(page.text).toContain('/gallery/api/assets?limit=60&offset=0');
+    expect(page.text).toContain('每 15 秒自动刷新');
+  });
 });
